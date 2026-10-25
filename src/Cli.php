@@ -101,6 +101,8 @@ final class Cli
         try {
             foreach ($paths === [] ? ['.'] : $paths as $path) {
                 $abs = str_starts_with($path, '/') ? $path : $cwd . '/' . $path;
+                $abs = realpath($abs) ?: $abs;
+                $cwd = realpath($cwd) ?: $cwd;
                 foreach (self::projects($abs) as $dir) {
                     $rel = ltrim(substr($dir, strlen(rtrim($cwd, '/'))), '/');
                     $findings = [...$findings, ...$checks->run(Project::load($dir, str_starts_with($dir, $cwd) ? $rel : $dir))];
@@ -133,7 +135,7 @@ final class Cli
     }
 
     /**
-     * Directories that contain a composer.json, skipping vendor and VCS folders.
+     * Directories that contain a composer.json, skipping vendor, VCS and test fixture folders.
      *
      * @return list<string>
      */
@@ -148,7 +150,8 @@ final class Cli
         $out = is_file($path . '/composer.json') ? [rtrim($path, '/')] : [];
         $entries = scandir($path) ?: [];
         foreach ($entries as $e) {
-            if (in_array($e, ['.', '..', 'vendor', 'node_modules', '.git'], true) || !is_dir("{$path}/{$e}")) {
+            // Test fixtures are meant to be bad; scan them by naming the path explicitly.
+            if (in_array($e, ['.', '..', 'vendor', 'node_modules', '.git', 'fixtures', 'testdata'], true) || !is_dir("{$path}/{$e}")) {
                 continue;
             }
             $out = [...$out, ...self::projects("{$path}/{$e}")];
