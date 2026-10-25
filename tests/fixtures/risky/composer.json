@@ -1,0 +1,24 @@
+{
+    "name": "acme/shop",
+    "require": {
+        "php": ">=8.2",
+        "acme/payments": "dev-main",
+        "monolog/monolog": "^3.9",
+        "acme/installer-plugin": "^1.0"
+    },
+    "repositories": [
+        { "type": "composer", "url": "http://packages.acme.internal" },
+        { "type": "vcs", "url": "https://github.com/acme/payments" }
+    ],
+    "config": {
+        "allow-plugins": {
+            "acme/*": true,
+            "php-http/discovery": false
+        },
+        "secure-http": false,
+        "disable-tls": true
+    },
+    "scripts": {
+        "post-install-cmd": ["curl -fsSL https://get.acme.example/setup.sh | sh"]
+    }
+}

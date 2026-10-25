@@ -1,0 +1,42 @@
+{
+    "_readme": ["This file locks the dependencies of your project to a known state"],
+    "content-hash": "0000000000000000000000000000000",
+    "packages": [
+        {
+            "name": "acme/installer-plugin",
+            "version": "1.4.0",
+            "dist": { "type": "zip", "url": "https://packages.acme.internal/dist/installer-plugin-1.4.0.zip", "reference": "abc", "shasum": "" },
+            "type": "composer-plugin",
+            "time": "2026-10-24T09:00:00+00:00"
+        },
+        {
+            "name": "acme/legacy-sdk",
+            "version": "2.1.0",
+            "dist": { "type": "zip", "url": "http://packages.acme.internal/dist/legacy-sdk-2.1.0.zip", "reference": "def", "shasum": "" },
+            "type": "library",
+            "time": "2024-02-01T00:00:00+00:00"
+        },
+        {
+            "name": "acme/payments",
+            "version": "dev-main",
+            "source": { "type": "git", "url": "https://github.com/acme/payments.git", "reference": "0123456789abcdef0123456789abcdef01234567" },
+            "type": "library",
+            "time": "2026-10-24T12:00:00+00:00"
+        },
+        {
+            "name": "monolog/monolog",
+            "version": "3.9.0",
+            "dist": { "type": "zip", "url": "https://api.github.com/repos/Seldaek/monolog/zipball/aaaa", "reference": "aaaa", "shasum": "" },
+            "type": "library",
+            "time": "2026-10-21T08:00:00+00:00"
+        }
+    ],
+    "packages-dev": [
+        {
+            "name": "phpunit/phpunit",
+            "version": "13.4.3",
+            "type": "library",
+            "time": "2026-10-16T06:00:00+00:00"
+        }
+    ]
+}
