@@ -28,8 +28,15 @@ if (!$loaded) {
 }
 
 $cwd = getcwd();
+$args = [];
+$serverArgv = $_SERVER['argv'] ?? [];
+foreach (is_array($serverArgv) ? array_slice($serverArgv, 1) : [] as $arg) {
+    if (is_string($arg)) {
+        $args[] = $arg;
+    }
+}
 exit(ComposerGuard\Cli::run(
-    array_values(array_slice($argv, 1)),
+    $args,
     static function (string $s): void {
         fwrite(STDOUT, $s);
     },
