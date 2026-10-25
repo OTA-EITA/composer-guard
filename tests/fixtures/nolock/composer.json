@@ -1,0 +1,4 @@
+{
+    "name": "acme/lib",
+    "config": { "allow-plugins": true }
+}
