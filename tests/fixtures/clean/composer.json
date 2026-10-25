@@ -1,0 +1,9 @@
+{
+    "name": "acme/api",
+    "require": { "php": ">=8.2", "monolog/monolog": "^3.8" },
+    "config": {
+        "allow-plugins": { "composer/installers": true },
+        "secure-http": true
+    },
+    "scripts": { "test": "phpunit" }
+}
