@@ -23,7 +23,10 @@ final class ChecksTest extends TestCase
         return array_map(static fn (Finding $f): string => "{$f->checkId}:{$f->line}", (new Checks($minAge, self::now()))->run($p));
     }
 
-    /** @param array<string, mixed> $json @param array<string, mixed>|null $lock */
+    /**
+     * @param array<string, mixed> $json
+     * @param array<string, mixed>|null $lock
+     */
     private static function project(array $json, ?array $lock = null): Project
     {
         $enc = static fn (array $a): string => json_encode($a, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
