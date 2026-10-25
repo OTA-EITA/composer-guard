@@ -89,6 +89,7 @@ final class ChecksTest extends TestCase
             ['name' => 'a/b', 'version' => '1.0.0', 'time' => 'not a date'],
             ['name' => 'a/c', 'version' => 'dev-main', 'time' => '2026-10-24T00:00:00+00:00'],
             ['name' => 'a/d', 'version' => '1.0.0'],
+            ['name' => 'roave/security-advisories', 'version' => 'dev-latest'],
             'not a package',
         ], 'packages-dev' => 'nope']);
         self::assertSame(['CG006:9'], self::ids($p));
