@@ -89,7 +89,8 @@ final class Checks
                 }
             }
 
-            if (str_starts_with($version, 'dev-')) {
+            // roave/security-advisories is meant to be required as dev-master: it only holds conflict rules, no code.
+            if (str_starts_with($version, 'dev-') && $name !== 'roave/security-advisories') {
                 $add('CG006', $id, $file, $line, "{$id} is locked to a branch" . ($dev ? ' (dev dependency)' : ''), 'Require a tagged release; a branch can change under you between installs on different machines.');
             }
 
