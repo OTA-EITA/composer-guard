@@ -1,0 +1,85 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ["8.4", "8.5"]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: pcov
+          tools: none
+      - run: composer validate --strict
+      # Plugins and scripts of dependencies never run.
+      - run: composer install --no-interaction --no-plugins --no-scripts
+      - run: composer audit
+      - run: vendor/bin/phpstan analyse --no-progress
+      - run: vendor/bin/phpunit --coverage-text
+      - name: this project passes its own checks
+        run: bin/composer-guard --fail-on medium
+
+  runner-php:
+    # The action uses the runner's own PHP: make sure the tool runs there without vendor/.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - run: php --version
+      - run: for f in src/*.php bin/composer-guard; do php -l "$f"; done
+      - run: bin/composer-guard --fail-on none tests/fixtures | tee out.txt && grep -q 'CG007' out.txt
+
+  action:
+    runs-on: ubuntu-latest
+    needs: runner-php
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./
+        with:
+          path: tests/fixtures/clean
+          fail-on: low
+      - uses: ./
+        id: risky
+        continue-on-error: true
+        with:
+          path: tests/fixtures/risky
+          min-age: "0"
+      - name: the risky fixture failed
+        env:
+          OUTCOME: ${{ steps.risky.outcome }}
+        run: test "$OUTCOME" = failure
+
+  gha-guard:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: OTA-EITA/gha-guard@647404df7b2c96877a2043a92e09382a1ee1dde9 # v0.1.2
+        id: guard
+        with:
+          fail-on: low
+      - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        if: always()
+        with:
+          sarif_file: ${{ steps.guard.outputs.sarif-file }}
+          category: gha-guard
