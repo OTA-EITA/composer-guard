@@ -1,0 +1,45 @@
+name: composer-guard
+description: Catch freshly released packages, plugins allowed to run code and insecure transport in composer.json and composer.lock
+author: OTA-EITA
+branding:
+  icon: package
+  color: blue
+
+inputs:
+  path:
+    description: Space separated directories or composer.json files to scan
+    default: .
+  min-age:
+    description: Report versions released fewer than this many days ago
+    default: "7"
+  fail-on:
+    description: Fail on findings at least this severe (high, medium, low or none)
+    default: high
+  sarif-file:
+    description: Where to write the SARIF report
+    default: composer-guard.sarif
+
+outputs:
+  sarif-file:
+    description: Path of the SARIF report, for github/codeql-action/upload-sarif
+    value: ${{ steps.run.outputs.sarif-file }}
+
+runs:
+  using: composite
+  steps:
+    # Uses the runner's PHP; the tool has no dependencies to install.
+    # Inputs reach the script through the environment, never through ${{ }} in the script body.
+    - id: run
+      shell: bash
+      env:
+        CG_PATHS: ${{ inputs.path }}
+        CG_MIN_AGE: ${{ inputs.min-age }}
+        CG_FAIL_ON: ${{ inputs.fail-on }}
+        CG_SARIF: ${{ inputs.sarif-file }}
+        CG_BIN: ${{ github.action_path }}/bin/composer-guard
+      run: |
+        read -r -a paths <<< "$CG_PATHS"
+        php "$CG_BIN" --min-age "$CG_MIN_AGE" --fail-on none --format sarif "${paths[@]}" > "$CG_SARIF"
+        php "$CG_BIN" --min-age "$CG_MIN_AGE" --fail-on none --format markdown "${paths[@]}" >> "$GITHUB_STEP_SUMMARY"
+        echo "sarif-file=$CG_SARIF" >> "$GITHUB_OUTPUT"
+        php "$CG_BIN" --min-age "$CG_MIN_AGE" --fail-on "$CG_FAIL_ON" "${paths[@]}"
