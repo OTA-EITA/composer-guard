@@ -19,7 +19,10 @@ final class Report
         };
     }
 
-    /** @param list<Finding> $findings @return array{high: int, medium: int, low: int} */
+    /**
+     * @param list<Finding> $findings
+     * @return array{high: int, medium: int, low: int}
+     */
     private static function counts(array $findings): array
     {
         $c = ['high' => 0, 'medium' => 0, 'low' => 0];
