@@ -42,6 +42,14 @@ final class CliTest extends TestCase
         self::assertStringContainsString('3 project(s), 10 finding(s): 7 high, 3 medium, 0 low', $out);
     }
 
+    public function testDirectoryWalkSkipsFixturesUnlessNamed(): void
+    {
+        [$code, $out] = self::cli(['.']);
+        self::assertSame(0, $code);
+        self::assertStringContainsString('1 project(s), 0 finding(s)', $out);
+        self::assertStringNotContainsString('./', self::cli(['--fail-on', 'none', './tests/fixtures/risky'])[1]);
+    }
+
     public function testCleanProjectPasses(): void
     {
         [$code, $out] = self::cli(['tests/fixtures/clean', '--fail-on', 'low']);
