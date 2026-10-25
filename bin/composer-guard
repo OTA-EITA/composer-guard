@@ -1,0 +1,40 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// Installed as a dependency, from a checkout with vendor/, or straight from a
+// checkout (the GitHub Action): fall back to a tiny PSR-4 loader, since the
+// tool itself has no runtime dependencies.
+$autoloaders = [__DIR__ . '/../../../autoload.php', __DIR__ . '/../vendor/autoload.php'];
+$loaded = false;
+foreach ($autoloaders as $file) {
+    if (is_file($file)) {
+        require $file;
+        $loaded = true;
+        break;
+    }
+}
+if (!$loaded) {
+    spl_autoload_register(static function (string $class): void {
+        $prefix = 'ComposerGuard\\';
+        if (str_starts_with($class, $prefix)) {
+            $file = __DIR__ . '/../src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($file)) {
+                require $file;
+            }
+        }
+    });
+}
+
+$cwd = getcwd();
+exit(ComposerGuard\Cli::run(
+    array_values(array_slice($argv, 1)),
+    static function (string $s): void {
+        fwrite(STDOUT, $s);
+    },
+    static function (string $s): void {
+        fwrite(STDERR, $s);
+    },
+    $cwd === false ? '.' : $cwd,
+));
