@@ -43,6 +43,12 @@ final class ChecksTest extends TestCase
         );
     }
 
+    public function testFindsWeakenedSafeguards(): void
+    {
+        $p = Project::load(__DIR__ . '/fixtures/weakened', 'weakened');
+        self::assertSame(['CG011:21', 'CG009:7', 'CG010:9', 'CG012:14', 'CG012:17'], self::ids($p));
+    }
+
     public function testCleanProjectHasNoFindings(): void
     {
         self::assertSame([], self::ids(Project::load(__DIR__ . '/fixtures/clean', 'clean')));
