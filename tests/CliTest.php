@@ -40,7 +40,7 @@ final class CliTest extends TestCase
         [$code, $out] = self::cli(['tests/fixtures']);
         self::assertSame(1, $code);
         self::assertStringContainsString('tests/fixtures/risky/composer.lock:6  HIGH   CG007', $out);
-        self::assertStringContainsString('3 project(s), 11 finding(s): 7 high, 4 medium, 0 low', $out);
+        self::assertStringContainsString('4 project(s), 16 finding(s): 8 high, 7 medium, 1 low', $out);
     }
 
     public function testDirectoryWalkSkipsFixturesUnlessNamed(): void
@@ -72,7 +72,7 @@ final class CliTest extends TestCase
         [, $json] = self::cli(['--format', 'json', '--fail-on', 'none', 'tests/fixtures']);
         $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($data);
-        self::assertSame(['high' => 7, 'medium' => 4, 'low' => 0], $data['summary']);
+        self::assertSame(['high' => 8, 'medium' => 7, 'low' => 1], $data['summary']);
 
         [, $md] = self::cli(['--format', 'markdown', '--fail-on', 'none', 'tests/fixtures/risky']);
         self::assertStringContainsString('### 🛑 composer-guard', $md);
