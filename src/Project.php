@@ -115,6 +115,31 @@ final class Project
         return self::lineOf($this->jsonText, $needle);
     }
 
+    /** 1-based line of the first occurrence of a string in composer.lock, or 1. */
+    public function lockTextLine(string $needle): int
+    {
+        return self::lineOf($this->lockText, $needle);
+    }
+
+    /**
+     * The hash Composer stores as "content-hash" in composer.lock, computed the
+     * way Composer's Locker::getContentHash() does: the keys of composer.json
+     * that affect dependency resolution, sorted, JSON-encoded without escaping flags.
+     */
+    public function contentHash(): string
+    {
+        $keys = ['name', 'version', 'require', 'require-dev', 'conflict', 'replace', 'provide', 'minimum-stability', 'prefer-stable', 'repositories', 'extra'];
+        $relevant = array_intersect_key($this->json, array_flip($keys));
+        $platform = self::get($this->json, ['config', 'platform']);
+        if ($platform !== null) {
+            $relevant['config'] = ['platform' => $platform];
+        }
+        ksort($relevant);
+
+        // JSON_THROW_ON_ERROR does not change the output; Composer passes no other flags.
+        return md5(json_encode($relevant, JSON_THROW_ON_ERROR));
+    }
+
     /** Line of a package's entry in composer.lock. */
     public function lockLine(string $package): int
     {
