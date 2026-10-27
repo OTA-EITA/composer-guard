@@ -1,0 +1,13 @@
+{
+    "content-hash": "5d2bcffa087ca08593874acf33a15867",
+    "packages": [
+        {
+            "name": "acme/auth",
+            "version": "2.3.0",
+            "dist": { "type": "zip", "url": "https://repo.acme.example/dist/acme/auth/2.3.0.zip", "reference": "2.3.0", "shasum": "" },
+            "type": "library",
+            "time": "2026-03-02T00:00:00+00:00"
+        }
+    ],
+    "packages-dev": []
+}
