@@ -20,6 +20,7 @@ final class Checks
         'CG010' => [Severity::Medium, 'Non-canonical repository', 'A repository has "canonical": false, so a higher version of the same package name on Packagist or a later repository can replace it (dependency confusion).'],
         'CG011' => [Severity::High, 'Security blocking disabled', 'config.policy (or the deprecated config.audit.block-insecure) turns off blocking of versions with security advisories or flagged as malware; medium when malware blocking is limited to some commands.'],
         'CG012' => [Severity::Medium, 'Advisories ignored', 'config.policy or config.audit makes composer audit pass despite advisories or malware, ignores whole severity levels or malware reports; low for single advisories ignored without a reason.'],
+        'CG013' => [Severity::Medium, 'Lock file out of date', 'The content-hash in composer.lock does not match composer.json, so composer install keeps installing the old locked set and ignores changed requirements, repositories and constraints.'],
     ];
 
     public function __construct(
@@ -86,6 +87,12 @@ final class Checks
                     $add('CG008', "scripts.{$event}", $p->jsonFile, $p->jsonLine($cmd), "script \"{$event}\" pipes a downloaded script into a shell", 'Vendor the script into the repository, or pin it by checksum.');
                 }
             }
+        }
+
+        // Lock file freshness, the way `composer validate` and `composer install` judge it
+        $hash = Project::string($p->lock, ['content-hash']);
+        if ($p->lockFile !== null && $hash !== null && $hash !== '' && $hash !== $p->contentHash()) {
+            $add('CG013', 'content-hash', $p->lockFile, $p->lockTextLine('"content-hash"'), 'composer.lock is out of date with composer.json: composer install ignores the changes and installs the old locked versions', 'Run composer update for the packages you changed (composer update --dry-run shows what would change) and commit composer.lock.');
         }
 
         // Locked packages
