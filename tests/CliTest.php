@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ComposerGuard\Tests;
 
+use ComposerGuard\Checks;
 use ComposerGuard\Cli;
 use ComposerGuard\Project;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -87,7 +88,7 @@ final class CliTest extends TestCase
         self::assertSame('composer-guard', Project::get($run, ['tool', 'driver', 'name']));
         $rules = Project::get($run, ['tool', 'driver', 'rules']);
         self::assertIsArray($rules);
-        self::assertCount(8, $rules);
+        self::assertCount(count(Checks::ALL), $rules);
         self::assertSame(['uri' => 'tests/fixtures/risky/composer.json'], Project::get($run, ['results', 0, 'locations', 0, 'physicalLocation', 'artifactLocation']));
     }
 
@@ -101,7 +102,7 @@ final class CliTest extends TestCase
     {
         self::assertStringContainsString('usage: composer-guard', self::cli(['-h'])[1]);
         self::assertSame("composer-guard 0.1.0\n", self::cli(['--version'])[1]);
-        self::assertCount(8, explode("\n", trim(self::cli(['--list-checks'])[1])));
+        self::assertCount(count(Checks::ALL), explode("\n", trim(self::cli(['--list-checks'])[1])));
         self::assertSame(0, self::cli(['--min-age', '0', 'tests/fixtures/clean'])[0]);
     }
 
