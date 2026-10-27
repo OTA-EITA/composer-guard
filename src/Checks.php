@@ -19,6 +19,7 @@ final class Checks
         'CG009' => [Severity::Medium, 'Unstable versions preferred', 'minimum-stability allows dev, alpha, beta or RC versions and prefer-stable is not true, so Composer picks the newest pre-release or branch over a stable release.'],
         'CG010' => [Severity::Medium, 'Non-canonical repository', 'A repository has "canonical": false, so a higher version of the same package name on Packagist or a later repository can replace it (dependency confusion).'],
         'CG011' => [Severity::High, 'Security blocking disabled', 'config.policy (or the deprecated config.audit.block-insecure) turns off blocking of versions with security advisories or flagged as malware; medium when malware blocking is limited to some commands.'],
+        'CG012' => [Severity::Medium, 'Advisories ignored', 'config.policy or config.audit makes composer audit pass despite advisories or malware, ignores whole severity levels or malware reports; low for single advisories ignored without a reason.'],
     ];
 
     public function __construct(
@@ -69,6 +70,7 @@ final class Checks
         }
 
         $this->blocking($p, $add);
+        $this->suppressed($p, $add);
 
         // Stability
         $stability = Project::get($p->json, ['minimum-stability']);
@@ -169,5 +171,80 @@ final class Checks
             $skipped = $scope === 'update' ? 'composer install does' : 'composer update, require and remove do';
             $add('CG011', 'config.policy.malware.block-scope', $p->jsonFile, $p->jsonKeyLine(['config', 'policy', 'malware', 'block-scope']), "config.policy.malware.block-scope is \"{$scope}\": {$skipped} not block versions flagged as malware", 'Remove it so that every command blocks malware (the default, "all").', Severity::Medium);
         }
+    }
+
+    /**
+     * Settings that keep composer audit quiet, or let ignored advisories and malware through blocking.
+     *
+     * @param callable(string, string, string, int, string, string=, ?Severity=): void $add
+     */
+    private function suppressed(Project $p, callable $add): void
+    {
+        if (Project::get($p->json, ['config', 'policy']) === false) {
+            return; // reported by CG011
+        }
+        foreach (['advisories' => 'security advisories', 'malware' => 'versions flagged as malware'] as $list => $what) {
+            $path = ['config', 'policy', $list, 'audit'];
+            $mode = Project::get($p->json, $path);
+            if ($mode === 'ignore' || $mode === 'report') {
+                $effect = $mode === 'ignore' ? "does not report {$what}" : "reports {$what} but still passes";
+                $add('CG012', implode('.', $path), $p->jsonFile, $p->jsonKeyLine($path), 'config.policy.' . $list . ".audit is \"{$mode}\": composer audit {$effect}", 'Remove it so that composer audit fails (the default); ignore single advisories by ID instead.');
+            }
+        }
+
+        foreach ([['config', 'policy', 'advisories', 'ignore-severity'], ['config', 'audit', 'ignore-severity']] as $path) {
+            $levels = self::entries(Project::get($p->json, $path));
+            if ($levels !== []) {
+                $names = implode(', ', array_keys($levels));
+                $add('CG012', implode('.', $path), $p->jsonFile, $p->jsonKeyLine($path), implode('.', $path) . " ignores every advisory of severity {$names}", 'Ignore single advisories by ID, with a reason, instead of whole severity levels.');
+            }
+        }
+
+        foreach (['ignore' => 'is not blocked or reported as malware', 'ignore-source' => 'is not checked for malware'] as $key => $effect) {
+            $path = ['config', 'policy', 'malware', $key];
+            foreach (array_keys(self::entries(Project::get($p->json, $path))) as $name) {
+                $add('CG012', implode('.', $path) . ".{$name}", $p->jsonFile, $p->jsonKeyLine($path), "{$name} {$effect} (" . implode('.', $path) . ')', 'Remove the entry unless the malware report is a confirmed false positive, and record why.');
+            }
+        }
+
+        foreach ([['config', 'policy', 'advisories', 'ignore-id'], ['config', 'policy', 'advisories', 'ignore'], ['config', 'audit', 'ignore']] as $path) {
+            foreach (self::entries(Project::get($p->json, $path)) as $name => $reason) {
+                if (!$reason) {
+                    $line = $p->jsonKeyLine([...$path, $name]);
+                    $add('CG012', implode('.', $path) . ".{$name}", $p->jsonFile, $line === 1 ? $p->jsonKeyLine($path) : $line, ($path[2] === 'advisories' && $path[3] === 'ignore' ? "advisories of {$name} are" : "advisory {$name} is") . ' ignored without a reason (' . implode('.', $path) . ')', 'Give the reason, e.g. {"' . $name . '": "not reachable: we do not use the affected feature"}, so the ignore can be reviewed and removed later.', Severity::Low);
+                }
+            }
+        }
+    }
+
+    /**
+     * Entries of an ignore list in any of its forms (a list of names, or a map of names to
+     * a reason, null, a rule object or a list of rule objects), with whether each gives a reason.
+     *
+     * @return array<string, bool>
+     */
+    private static function entries(mixed $list): array
+    {
+        if (!is_array($list)) {
+            return [];
+        }
+        $out = [];
+        foreach ($list as $key => $value) {
+            if (array_is_list($list)) {
+                if (is_string($value)) {
+                    $out[$value] = false;
+                }
+                continue;
+            }
+            $rules = is_array($value) && array_is_list($value) && $value !== [] ? $value : [$value];
+            $explained = true;
+            foreach ($rules as $rule) {
+                $reason = is_array($rule) ? ($rule['reason'] ?? null) : $rule;
+                $explained = $explained && is_string($reason) && trim($reason) !== '';
+            }
+            $out[(string) $key] = $explained;
+        }
+
+        return $out;
     }
 }
