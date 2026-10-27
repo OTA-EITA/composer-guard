@@ -101,7 +101,7 @@ final class CliTest extends TestCase
     public function testHelpVersionAndChecks(): void
     {
         self::assertStringContainsString('usage: composer-guard', self::cli(['-h'])[1]);
-        self::assertSame("composer-guard 0.1.0\n", self::cli(['--version'])[1]);
+        self::assertSame("composer-guard 0.2.0\n", self::cli(['--version'])[1]);
         self::assertCount(count(Checks::ALL), explode("\n", trim(self::cli(['--list-checks'])[1])));
         self::assertSame(0, self::cli(['--min-age', '0', 'tests/fixtures/clean'])[0]);
     }
