@@ -1,4 +1,5 @@
 {
+    "content-hash": "2b4aa752284883d0b4bc4a5bd2b1c78e",
     "packages": [
         {
             "name": "monolog/monolog",
