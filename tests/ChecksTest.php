@@ -163,4 +163,43 @@ final class ChecksTest extends TestCase
         $p = self::project(['config' => ['policy' => ['advisories' => ['ignore-id' => ['GHSA-1' => ['reason' => 'x']], 'block' => false], 'malware' => ['block' => false]]]]);
         self::assertSame(['CG011:10', 'CG011:13'], self::ids($p));
     }
+
+    /** @return iterable<string, array{array<string, mixed>, list<string>}> */
+    public static function suppressed(): iterable
+    {
+        yield 'audit reports only' => [['policy' => ['advisories' => ['audit' => 'report']]], ['CG012:medium']];
+        yield 'malware audit ignored' => [['policy' => ['malware' => ['audit' => 'ignore']]], ['CG012:medium']];
+        yield 'audit fails' => [['policy' => ['advisories' => ['audit' => 'fail'], 'malware' => ['audit' => 'fail']]], []];
+        yield 'severity list' => [['policy' => ['advisories' => ['ignore-severity' => ['low', 'medium']]]], ['CG012:medium']];
+        yield 'deprecated severity map' => [['audit' => ['ignore-severity' => ['low' => ['apply' => 'audit']]]], ['CG012:medium']];
+        yield 'malware ignore' => [['policy' => ['malware' => ['ignore' => ['acme/a' => 'false positive'], 'ignore-source' => ['https://x.example']]]], ['CG012:medium', 'CG012:medium']];
+        yield 'ids without reason' => [['policy' => ['advisories' => ['ignore-id' => ['CVE-2026-1' => null, 'GHSA-xxxx' => ['on-audit' => false], 'PKSA-1' => '']]]], ['CG012:low', 'CG012:low', 'CG012:low']];
+        yield 'ids as a list' => [['audit' => ['ignore' => ['CVE-2026-1', 'CVE-2026-2']]], ['CG012:low', 'CG012:low']];
+        yield 'ids with reasons' => [['policy' => ['advisories' => [
+            'ignore-id' => ['CVE-2026-1' => 'not reachable', 'GHSA-xxxx' => ['reason' => 'dev only', 'on-block' => false]],
+            'ignore' => ['acme/a' => [['constraint' => '<2', 'reason' => 'pinned'], ['constraint' => '>=3', 'reason' => 'patched']]],
+        ]], 'audit' => ['ignore' => ['CVE-2026-2' => ['apply' => 'audit', 'reason' => 'fixed upstream']]]], []];
+        yield 'one rule without reason' => [['policy' => ['advisories' => ['ignore' => ['acme/a' => [['reason' => 'x'], ['constraint' => '<1']]]]]], ['CG012:low']];
+        yield 'policy off is CG011 only' => [['policy' => false], ['CG011:high']];
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     * @param list<string> $want
+     */
+    #[DataProvider('suppressed')]
+    public function testSuppressedAdvisories(array $config, array $want): void
+    {
+        $findings = (new Checks(7, self::now()))->run(self::project(['config' => $config]));
+        self::assertSame($want, array_map(static fn (Finding $f): string => "{$f->checkId}:{$f->severity->value}", $findings));
+    }
+
+    public function testSuppressedAdvisoryPointsAtTheEntry(): void
+    {
+        $p = self::project(['config' => ['policy' => ['advisories' => ['ignore-id' => ['CVE-2026-1' => 'ok', 'CVE-2026-2' => null]]]]]);
+        $findings = (new Checks(7, self::now()))->run($p);
+        self::assertCount(1, $findings);
+        self::assertSame(7, $findings[0]->line);
+        self::assertSame('advisory CVE-2026-2 is ignored without a reason (config.policy.advisories.ignore-id)', $findings[0]->message);
+    }
 }
