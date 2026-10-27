@@ -125,6 +125,58 @@ final class Project
         return substr_count($this->jsonText, "\n", 0, $m[0][$nth][1]) + 1;
     }
 
+    /**
+     * 1-based line of the key at a path such as ['config', 'policy', 'malware', 'block']
+     * in composer.json (list indexes count array items), or 1 when it is not there.
+     *
+     * @param list<string|int> $path
+     */
+    public function jsonKeyLine(array $path): int
+    {
+        $text = $this->jsonText;
+        $len = strlen($text);
+        // Per open container: whether it is an object, and the current key or list index.
+        $objects = [];
+        $keys = [];
+        $expectKey = false;
+        for ($i = 0; $i < $len; $i++) {
+            $c = $text[$i];
+            if ($c === '"') {
+                $start = $i;
+                for ($i++; $i < $len && $text[$i] !== '"'; $i++) {
+                    if ($text[$i] === '\\') {
+                        $i++;
+                    }
+                }
+                if ($expectKey && $keys !== []) {
+                    $key = json_decode(substr($text, $start, $i - $start + 1));
+                    $keys[count($keys) - 1] = is_string($key) ? $key : '';
+                    $expectKey = false;
+                    if ($keys === $path) {
+                        return substr_count($text, "\n", 0, $start) + 1;
+                    }
+                }
+            } elseif ($c === '{' || $c === '[') {
+                $objects[] = $c === '{';
+                $keys[] = $c === '{' ? '' : 0;
+                $expectKey = $c === '{';
+            } elseif ($c === '}' || $c === ']') {
+                array_pop($objects);
+                array_pop($keys);
+            } elseif ($c === ',' && $keys !== []) {
+                $top = count($keys) - 1;
+                $index = $keys[$top];
+                if ($objects[$top] ?? false) {
+                    $expectKey = true;
+                } elseif (is_int($index)) {
+                    $keys[$top] = $index + 1;
+                }
+            }
+        }
+
+        return 1;
+    }
+
     /** 1-based line of the first occurrence of a string in composer.lock, or 1. */
     public function lockTextLine(string $needle): int
     {
