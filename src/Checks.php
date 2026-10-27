@@ -18,6 +18,7 @@ final class Checks
         'CG008' => [Severity::High, 'Remote script in a Composer script', 'A composer.json script downloads a script and pipes it into a shell.'],
         'CG009' => [Severity::Medium, 'Unstable versions preferred', 'minimum-stability allows dev, alpha, beta or RC versions and prefer-stable is not true, so Composer picks the newest pre-release or branch over a stable release.'],
         'CG010' => [Severity::Medium, 'Non-canonical repository', 'A repository has "canonical": false, so a higher version of the same package name on Packagist or a later repository can replace it (dependency confusion).'],
+        'CG011' => [Severity::High, 'Security blocking disabled', 'config.policy (or the deprecated config.audit.block-insecure) turns off blocking of versions with security advisories or flagged as malware; medium when malware blocking is limited to some commands.'],
     ];
 
     public function __construct(
@@ -66,6 +67,8 @@ final class Checks
                 $add('CG010', $name, $p->jsonFile, $p->jsonKeyLine(['repositories', $key, 'canonical']), "repository {$name} is not canonical: a higher version of one of its packages published on Packagist or a later repository can be installed instead", 'Remove "canonical": false. If only some packages should come from this repository, list them with "only" instead.');
             }
         }
+
+        $this->blocking($p, $add);
 
         // Stability
         $stability = Project::get($p->json, ['minimum-stability']);
@@ -132,5 +135,39 @@ final class Checks
         usort($out, static fn (Finding $a, Finding $b): int => [$b->severity->rank(), $a->file, $a->line, $a->checkId] <=> [$a->severity->rank(), $b->file, $b->line, $b->checkId]);
 
         return $out;
+    }
+
+    /**
+     * config.policy (Composer 2.10+) and the deprecated config.audit keys it replaces:
+     * blocking of insecure and malicious versions during update, require, remove and install.
+     *
+     * @param callable(string, string, string, int, string, string=, ?Severity=): void $add
+     */
+    private function blocking(Project $p, callable $add): void
+    {
+        $policy = Project::get($p->json, ['config', 'policy']);
+        if ($policy === false) {
+            $add('CG011', 'config.policy', $p->jsonFile, $p->jsonKeyLine(['config', 'policy']), 'config.policy is false: Composer installs versions with known security advisories and versions flagged as malware', 'Remove it. To skip a single advisory, list its ID in config.policy.advisories.ignore-id with a reason.');
+
+            return;
+        }
+        $advisories = Project::get($p->json, ['config', 'policy', 'advisories']);
+        if ($advisories === false || Project::get($p->json, ['config', 'policy', 'advisories', 'block']) === false) {
+            $key = $advisories === false ? 'config.policy.advisories' : 'config.policy.advisories.block';
+            $add('CG011', $key, $p->jsonFile, $p->jsonKeyLine($advisories === false ? ['config', 'policy', 'advisories'] : ['config', 'policy', 'advisories', 'block']), "{$key} is false: composer update installs versions with known security advisories", 'Remove it. To skip a single advisory, list its ID in config.policy.advisories.ignore-id with a reason.');
+        }
+        if (Project::get($p->json, ['config', 'audit', 'block-insecure']) === false) {
+            $add('CG011', 'config.audit.block-insecure', $p->jsonFile, $p->jsonKeyLine(['config', 'audit', 'block-insecure']), 'config.audit.block-insecure is false: composer update installs versions with known security advisories', 'Remove it. To skip a single advisory, list its ID in config.audit.ignore with a reason.');
+        }
+        $malware = Project::get($p->json, ['config', 'policy', 'malware']);
+        if ($malware === false || Project::get($p->json, ['config', 'policy', 'malware', 'block']) === false) {
+            $key = $malware === false ? 'config.policy.malware' : 'config.policy.malware.block';
+            $add('CG011', $key, $p->jsonFile, $p->jsonKeyLine($malware === false ? ['config', 'policy', 'malware'] : ['config', 'policy', 'malware', 'block']), "{$key} is false: Composer installs versions flagged as malware", 'Remove it.');
+        }
+        $scope = Project::get($p->json, ['config', 'policy', 'malware', 'block-scope']);
+        if (is_string($scope) && $scope !== 'all') {
+            $skipped = $scope === 'update' ? 'composer install does' : 'composer update, require and remove do';
+            $add('CG011', 'config.policy.malware.block-scope', $p->jsonFile, $p->jsonKeyLine(['config', 'policy', 'malware', 'block-scope']), "config.policy.malware.block-scope is \"{$scope}\": {$skipped} not block versions flagged as malware", 'Remove it so that every command blocks malware (the default, "all").', Severity::Medium);
+        }
     }
 }
