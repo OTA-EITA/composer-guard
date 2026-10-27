@@ -132,4 +132,35 @@ final class ChecksTest extends TestCase
         ]]);
         self::assertSame(['CG010:6', 'CG010:26'], self::ids($p));
     }
+
+    /** @return iterable<string, array{array<string, mixed>, list<string>}> */
+    public static function blocking(): iterable
+    {
+        yield 'policy off' => [['policy' => false, 'audit' => ['block-insecure' => false]], ['CG011:high']];
+        yield 'advisories off' => [['policy' => ['advisories' => false]], ['CG011:high']];
+        yield 'advisory blocking off' => [['policy' => ['advisories' => ['audit' => 'fail', 'block' => false]]], ['CG011:high']];
+        yield 'deprecated block-insecure' => [['audit' => ['block-insecure' => false]], ['CG011:high']];
+        yield 'malware off' => [['policy' => ['malware' => false]], ['CG011:high']];
+        yield 'malware blocking off' => [['policy' => ['malware' => ['block' => false]]], ['CG011:high']];
+        yield 'malware blocked on update only' => [['policy' => ['malware' => ['block-scope' => 'update']]], ['CG011:medium']];
+        yield 'defaults spelled out' => [['policy' => ['advisories' => ['block' => true], 'malware' => ['block' => true, 'block-scope' => 'all']], 'audit' => ['block-insecure' => true]], []];
+        yield 'abandoned blocking is opt-in' => [['policy' => ['abandoned' => false]], []];
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     * @param list<string> $want
+     */
+    #[DataProvider('blocking')]
+    public function testSecurityBlocking(array $config, array $want): void
+    {
+        $findings = (new Checks(7, self::now()))->run(self::project(['config' => $config]));
+        self::assertSame($want, array_map(static fn (Finding $f): string => "{$f->checkId}:{$f->severity->value}", $findings));
+    }
+
+    public function testBlockingFindingPointsAtTheKey(): void
+    {
+        $p = self::project(['config' => ['policy' => ['advisories' => ['ignore-id' => ['GHSA-1' => ['reason' => 'x']], 'block' => false], 'malware' => ['block' => false]]]]);
+        self::assertSame(['CG011:10', 'CG011:13'], self::ids($p));
+    }
 }
