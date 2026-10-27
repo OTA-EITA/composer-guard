@@ -1,0 +1,25 @@
+{
+    "name": "acme/portal",
+    "require": {
+        "php": ">=8.2",
+        "acme/auth": "^2.0"
+    },
+    "minimum-stability": "dev",
+    "repositories": [
+        { "type": "composer", "url": "https://repo.acme.example", "canonical": false }
+    ],
+    "config": {
+        "policy": {
+            "advisories": {
+                "audit": "report",
+                "ignore-id": {
+                    "CVE-2026-11111": "only the CLI entry point is affected and we do not ship it",
+                    "GHSA-aaaa-bbbb-cccc": null
+                }
+            },
+            "malware": {
+                "block": false
+            }
+        }
+    }
+}
