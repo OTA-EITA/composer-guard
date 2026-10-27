@@ -38,7 +38,7 @@ final class ChecksTest extends TestCase
     {
         $p = Project::load(__DIR__ . '/fixtures/risky', 'risky');
         self::assertSame(
-            ['CG005:10', 'CG003:18', 'CG004:19', 'CG008:22', 'CG007:6', 'CG005:13', 'CG002:15', 'CG006:20', 'CG007:27'],
+            ['CG005:10', 'CG003:18', 'CG004:19', 'CG008:22', 'CG007:6', 'CG005:13', 'CG002:15', 'CG013:3', 'CG006:20', 'CG007:27'],
             self::ids($p),
         );
     }
@@ -201,5 +201,24 @@ final class ChecksTest extends TestCase
         self::assertCount(1, $findings);
         self::assertSame(7, $findings[0]->line);
         self::assertSame('advisory CVE-2026-2 is ignored without a reason (config.policy.advisories.ignore-id)', $findings[0]->message);
+    }
+
+    public function testLockFileFreshness(): void
+    {
+        $json = ['name' => 'acme/app', 'require' => ['php' => '>=8.2'], 'config' => ['platform' => ['php' => '8.2.0'], 'sort-packages' => true], 'scripts' => ['test' => 'phpunit']];
+        $hash = (new Project('composer.json', json_encode($json, JSON_THROW_ON_ERROR)))->contentHash();
+        self::assertSame([], self::ids(self::project($json, ['content-hash' => $hash, 'packages' => []])));
+
+        // Keys that do not affect resolution (scripts, other config) may change freely.
+        $edited = [...$json, 'scripts' => ['test' => 'phpunit --testdox'], 'config' => ['platform' => ['php' => '8.2.0']]];
+        self::assertSame([], self::ids(self::project($edited, ['content-hash' => $hash, 'packages' => []])));
+
+        $bumped = [...$json, 'require' => ['php' => '>=8.3']];
+        self::assertSame(['CG013:2'], self::ids(self::project($bumped, ['content-hash' => $hash, 'packages' => []])));
+        $platform = [...$json, 'config' => ['platform' => ['php' => '8.3.0']]];
+        self::assertSame(['CG013:2'], self::ids(self::project($platform, ['content-hash' => $hash, 'packages' => []])));
+
+        // Very old lock files only have "hash" (of the whole file); Composer compares that differently.
+        self::assertSame([], self::ids(self::project($bumped, ['hash' => 'abc', 'packages' => []])));
     }
 }
