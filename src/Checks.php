@@ -156,22 +156,22 @@ final class Checks
     {
         $policy = Project::get($p->json, ['config', 'policy']);
         if ($policy === false) {
-            $add('CG011', 'config.policy', $p->jsonFile, $p->jsonKeyLine(['config', 'policy']), 'config.policy is false: Composer installs versions with known security advisories and versions flagged as malware', 'Remove it. To skip a single advisory, list its ID in config.policy.advisories.ignore-id with a reason.');
+            $add('CG011', 'config.policy', $p->jsonFile, $p->jsonKeyLine(['config', 'policy']), 'config.policy is false: Composer no longer blocks versions with known security advisories or versions flagged as malware', 'Remove it. To skip a single advisory, list its ID in config.policy.advisories.ignore-id with a reason.');
 
             return;
         }
         $advisories = Project::get($p->json, ['config', 'policy', 'advisories']);
         if ($advisories === false || Project::get($p->json, ['config', 'policy', 'advisories', 'block']) === false) {
             $key = $advisories === false ? 'config.policy.advisories' : 'config.policy.advisories.block';
-            $add('CG011', $key, $p->jsonFile, $p->jsonKeyLine($advisories === false ? ['config', 'policy', 'advisories'] : ['config', 'policy', 'advisories', 'block']), "{$key} is false: composer update installs versions with known security advisories", 'Remove it. To skip a single advisory, list its ID in config.policy.advisories.ignore-id with a reason.');
+            $add('CG011', $key, $p->jsonFile, $p->jsonKeyLine($advisories === false ? ['config', 'policy', 'advisories'] : ['config', 'policy', 'advisories', 'block']), "{$key} is false: composer update no longer blocks versions with known security advisories", 'Remove it. To skip a single advisory, list its ID in config.policy.advisories.ignore-id with a reason.');
         }
         if (Project::get($p->json, ['config', 'audit', 'block-insecure']) === false) {
-            $add('CG011', 'config.audit.block-insecure', $p->jsonFile, $p->jsonKeyLine(['config', 'audit', 'block-insecure']), 'config.audit.block-insecure is false: composer update installs versions with known security advisories', 'Remove it. To skip a single advisory, list its ID in config.audit.ignore with a reason.');
+            $add('CG011', 'config.audit.block-insecure', $p->jsonFile, $p->jsonKeyLine(['config', 'audit', 'block-insecure']), 'config.audit.block-insecure is false: composer update no longer blocks versions with known security advisories', 'Remove it. To skip a single advisory, list its ID in config.audit.ignore with a reason.');
         }
         $malware = Project::get($p->json, ['config', 'policy', 'malware']);
         if ($malware === false || Project::get($p->json, ['config', 'policy', 'malware', 'block']) === false) {
             $key = $malware === false ? 'config.policy.malware' : 'config.policy.malware.block';
-            $add('CG011', $key, $p->jsonFile, $p->jsonKeyLine($malware === false ? ['config', 'policy', 'malware'] : ['config', 'policy', 'malware', 'block']), "{$key} is false: Composer installs versions flagged as malware", 'Remove it.');
+            $add('CG011', $key, $p->jsonFile, $p->jsonKeyLine($malware === false ? ['config', 'policy', 'malware'] : ['config', 'policy', 'malware', 'block']), "{$key} is false: Composer no longer blocks versions flagged as malware", 'Remove it.');
         }
         $scope = Project::get($p->json, ['config', 'policy', 'malware', 'block-scope']);
         if (is_string($scope) && $scope !== 'all') {
