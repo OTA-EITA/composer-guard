@@ -22,7 +22,12 @@
     "bin": ["bin/composer-guard"],
     "config": {
         "allow-plugins": {},
-        "sort-packages": true
+        "sort-packages": true,
+        "audit": {
+            "ignore": {
+                "PKSA-qhjm-rpqc-qkn6": "PHPUnit の PHPT カバレッジの一時ディレクトリの問題。開発用の依存で、CI は使い捨ての単一ユーザー環境。修正版 13.4.4 (2026-10-27 公開) は公開から 7 日たつ 2026-11-03 以降に上げて、この除外を外す"
+            }
+        }
     },
     "scripts": {
         "test": "phpunit",
