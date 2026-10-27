@@ -5,7 +5,7 @@
 
 **Supply-chain checks for PHP projects that `composer audit` doesn't do.**
 
-`composer audit` knows about published advisories, malware and abandoned packages. composer-guard looks at the things that let a _not-yet-known_ attack in: versions released a few days ago, Composer plugins allowed to run code during install, packages fetched without TLS, and dependencies locked to a moving branch. It reads `composer.json` and `composer.lock` only — no network, no dependencies, plain PHP.
+`composer audit` knows about published advisories, malware and abandoned packages. composer-guard looks at the things that let a _not-yet-known_ attack in: versions released a few days ago, Composer plugins allowed to run code during install, packages fetched without TLS, dependencies locked to a moving branch, repositories open to dependency confusion — and at settings that switch off the protection Composer already has, such as advisory and malware blocking. It reads `composer.json` and `composer.lock` only — no network, no dependencies, plain PHP.
 
 ```text
 $ bin/composer-guard tests/fixtures/risky
@@ -16,10 +16,11 @@ tests/fixtures/risky/composer.json:22  HIGH   CG008  script "post-install-cmd" p
 tests/fixtures/risky/composer.lock:6  HIGH   CG007  acme/installer-plugin@1.4.0 was released less than a day ago and is a Composer plugin, which runs code during install
 tests/fixtures/risky/composer.lock:13  HIGH   CG005  acme/legacy-sdk@2.1.0 is downloaded over plain HTTP (dist: http://packages.acme.internal/dist/legacy-sdk-2.1.0.zip)
 tests/fixtures/risky/composer.json:15  MEDIUM CG002  config.allow-plugins allows "acme/*" to run code during install
+tests/fixtures/risky/composer.lock:3  MEDIUM CG013  composer.lock is out of date with composer.json: composer install ignores the changes and installs the old locked versions
 tests/fixtures/risky/composer.lock:20  MEDIUM CG006  acme/payments@dev-main is locked to a branch
 tests/fixtures/risky/composer.lock:27  MEDIUM CG007  monolog/monolog@3.9.0 was released 3 day(s) ago
 
-1 project(s), 9 finding(s): 6 high, 3 medium, 0 low
+1 project(s), 10 finding(s): 6 high, 4 medium, 0 low
 ```
 
 ## Why a cooldown matters for Composer
@@ -44,6 +45,11 @@ composer update --with "vendor/package:<1.2.3"
 | CG006 | medium   | Packages locked to a branch (`dev-main`), whose contents change with every push (`roave/security-advisories` is exempt: it is meant to be used that way) |
 | CG007 | medium   | Versions released less than `--min-age` days ago (default 7); **high** for Composer plugins, which run code at install time                              |
 | CG008 | high     | Composer scripts that pipe a downloaded script into a shell                                                                                              |
+| CG009 | medium   | `minimum-stability` below `stable` without `"prefer-stable": true`: Composer then installs the newest pre-release or branch even when a stable release matches ([docs](https://getcomposer.org/doc/04-schema.md#prefer-stable))     |
+| CG010 | medium   | Repositories with `"canonical": false`: a higher version of the same package name on Packagist can replace yours — dependency confusion ([docs](https://getcomposer.org/doc/articles/repository-priorities.md#canonical-repositories)) |
+| CG011 | high     | `config.policy: false`, advisory or malware blocking turned off (`policy.advisories.block`, `policy.malware.block`, deprecated `audit.block-insecure`); **medium** for `policy.malware.block-scope` other than `all` ([docs](https://getcomposer.org/doc/06-config.md#policy)) |
+| CG012 | medium   | `composer audit` made to pass (`policy.advisories.audit` / `policy.malware.audit` set to `report` or `ignore`), whole severity levels ignored, malware reports ignored; **low** for an advisory ignored without a reason ([docs](https://getcomposer.org/doc/06-config.md#ignore-id)) |
+| CG013 | medium   | `composer.lock` out of date: its `content-hash` does not match `composer.json`, computed offline the way Composer does, so `composer install` keeps the old locked set ([docs](https://getcomposer.org/doc/01-basic-usage.md#installing-from-composer-lock)) |
 
 ## Tested on real projects
 
@@ -51,9 +57,9 @@ composer update --with "vendor/package:<1.2.3"
 | ------------------------------------------------------------------- | --------------- | ----------------------------------------------------------------------- |
 | [symfony/demo](https://github.com/symfony/demo) (8d2e2ef)           | 153             | none                                                                    |
 | [monicahq/monica](https://github.com/monicahq/monica) (6e6ec21)     | 241             | none                                                                    |
-| [matomo-org/matomo](https://github.com/matomo-org/matomo) (2a639f9) | 87              | 2 versions released 2–4 days earlier, 4 packages locked to `dev-master` |
+| [matomo-org/matomo](https://github.com/matomo-org/matomo) (272da0b) | 87              | 2 versions released 4–6 days earlier, 4 packages locked to `dev-master` |
 
-Checked on 2026-10-25.
+Checked on 2026-10-27 with v0.2.0. None of the three trips CG009–CG013: all keep `minimum-stability` at `stable` (or leave it unset), use only canonical repositories, leave `config.policy` and `config.audit` at their defaults, and commit a lock file whose `content-hash` matches `composer.json`. The `content-hash` computation was also compared with Composer 2.10's own `Locker::getContentHash()` on 32 real `composer.json` files, with no mismatch.
 
 ## Usage
 
