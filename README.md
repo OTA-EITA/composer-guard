@@ -90,7 +90,7 @@ steps:
   - uses: actions/checkout@v5
     with:
       persist-credentials: false
-  - uses: OTA-EITA/composer-guard@v0.1.0 # pin to a commit SHA in real use
+  - uses: OTA-EITA/composer-guard@v0.2.0 # pin to a commit SHA in real use
     id: guard
     with:
       fail-on: high
