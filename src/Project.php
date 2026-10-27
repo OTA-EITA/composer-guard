@@ -115,6 +115,16 @@ final class Project
         return self::lineOf($this->jsonText, $needle);
     }
 
+    /** 1-based line of the $nth (0-based) match of a regular expression in composer.json, or 1. */
+    public function jsonLineMatching(string $regex, int $nth = 0): int
+    {
+        if (preg_match_all($regex, $this->jsonText, $m, PREG_OFFSET_CAPTURE) === false || !isset($m[0][$nth])) {
+            return 1;
+        }
+
+        return substr_count($this->jsonText, "\n", 0, $m[0][$nth][1]) + 1;
+    }
+
     /** 1-based line of the first occurrence of a string in composer.lock, or 1. */
     public function lockTextLine(string $needle): int
     {
