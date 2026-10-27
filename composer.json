@@ -1,6 +1,6 @@
 {
     "name": "ota-eita/composer-guard",
-    "description": "Supply-chain checks for composer.json and composer.lock: freshly released versions, plugins allowed to run code, insecure transport and unpinned VCS branches",
+    "description": "Supply-chain checks for composer.json and composer.lock: freshly released versions, plugins allowed to run code, insecure transport, unpinned VCS branches, dependency confusion, disabled advisory blocking and stale lock files",
     "type": "library",
     "license": "MIT",
     "keywords": ["composer", "security", "supply-chain", "lockfile", "sarif"],
