@@ -121,4 +121,15 @@ final class ChecksTest extends TestCase
     {
         self::assertSame($want, array_map(static fn (string $s): string => explode(':', $s)[0], self::ids(self::project($json))));
     }
+
+    public function testNonCanonicalRepositories(): void
+    {
+        $p = self::project(['repositories' => [
+            ['type' => 'composer', 'url' => 'https://repo.acme.example', 'canonical' => false],
+            ['type' => 'vcs', 'url' => 'https://github.com/acme/a', 'canonical' => true],
+            ['type' => 'composer', 'url' => 'https://repo2.acme.example', 'only' => ['acme/*']],
+            ['type' => 'package', 'package' => ['name' => 'acme/b', 'version' => '1.0.0'], 'canonical' => false],
+        ]]);
+        self::assertSame(['CG010:6', 'CG010:26'], self::ids($p));
+    }
 }
