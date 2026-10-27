@@ -56,15 +56,14 @@ final class Checks
             $add('CG004', 'config.disable-tls', $p->jsonFile, $p->jsonLine('"disable-tls"'), 'config.disable-tls is true: Composer fetches every HTTPS URL over plain HTTP', 'Remove it and enable the openssl extension instead.');
         }
         $repos = Project::get($p->json, ['repositories']);
-        $nonCanonical = 0;
-        foreach (is_array($repos) ? $repos : [] as $repo) {
+        foreach (is_array($repos) ? $repos : [] as $key => $repo) {
             $url = is_array($repo) ? Project::string($repo, ['url']) : null;
             if ($url !== null && str_starts_with(strtolower($url), 'http://')) {
                 $add('CG005', $url, $p->jsonFile, $p->jsonLine($url), "repository {$url} is fetched over plain HTTP", 'Use https://.');
             }
             if (is_array($repo) && ($repo['canonical'] ?? null) === false) {
                 $name = $url ?? Project::string($repo, ['type']) ?? 'repository';
-                $add('CG010', $name, $p->jsonFile, $p->jsonLineMatching('/"canonical"\s*:\s*false/', $nonCanonical++), "repository {$name} is not canonical: a higher version of one of its packages published on Packagist or a later repository can be installed instead", 'Remove "canonical": false. If only some packages should come from this repository, list them with "only" instead.');
+                $add('CG010', $name, $p->jsonFile, $p->jsonKeyLine(['repositories', $key, 'canonical']), "repository {$name} is not canonical: a higher version of one of its packages published on Packagist or a later repository can be installed instead", 'Remove "canonical": false. If only some packages should come from this repository, list them with "only" instead.');
             }
         }
 
