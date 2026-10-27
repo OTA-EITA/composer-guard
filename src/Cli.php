@@ -6,7 +6,7 @@ namespace ComposerGuard;
 
 final class Cli
 {
-    public const VERSION = '0.1.0';
+    public const VERSION = '0.2.0';
 
     private const USAGE = <<<'TXT'
         usage: composer-guard [options] [path ...]
