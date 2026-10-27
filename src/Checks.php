@@ -16,6 +16,7 @@ final class Checks
         'CG006' => [Severity::Medium, 'Unpinned branch', 'A package is locked to a VCS branch (dev-*), so its contents change with every push to that branch.'],
         'CG007' => [Severity::Medium, 'Freshly released', 'The locked version was released less than the cooldown period ago; high when the package is a Composer plugin.'],
         'CG008' => [Severity::High, 'Remote script in a Composer script', 'A composer.json script downloads a script and pipes it into a shell.'],
+        'CG009' => [Severity::Medium, 'Unstable versions preferred', 'minimum-stability allows dev, alpha, beta or RC versions and prefer-stable is not true, so Composer picks the newest pre-release or branch over a stable release.'],
     ];
 
     public function __construct(
@@ -59,6 +60,12 @@ final class Checks
             if ($url !== null && str_starts_with(strtolower($url), 'http://')) {
                 $add('CG005', $url, $p->jsonFile, $p->jsonLine($url), "repository {$url} is fetched over plain HTTP", 'Use https://.');
             }
+        }
+
+        // Stability
+        $stability = Project::get($p->json, ['minimum-stability']);
+        if (is_string($stability) && strtolower($stability) !== 'stable' && Project::get($p->json, ['prefer-stable']) !== true) {
+            $add('CG009', 'minimum-stability', $p->jsonFile, $p->jsonLine('"minimum-stability"'), "minimum-stability is \"{$stability}\" without \"prefer-stable\": true: Composer installs the newest {$stability} version or branch even when a stable release matches", 'Add "prefer-stable": true, or keep minimum-stability at stable and allow single packages with a flag such as "vendor/pkg": "^2.0@beta".');
         }
 
         // Scripts
